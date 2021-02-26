@@ -14,10 +14,12 @@ class AuthController extends RestController
         // header('Access-Control-Allow-Origin: *');
         // header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
         $this->load->model('Auth_model', 'auth');
+        $this->load->library('Authorization_Token');
     }
 
     public function users_get()
     {
+        header("Access-Control-Allow-Origin: *");
         // Users from a data store e.g. database
         $id = $this->get('id');
 
@@ -48,51 +50,96 @@ class AuthController extends RestController
         }
     }
 
-    public function fetch_get()
-    {
-        echo $this->response(array('test' => 'test'), 200);
-    }
-
     public function login_post()
     {
+        header("Access-Control-Allow-Origin: *");
         $this->form_validation->set_rules('email', 'Email', 'required|valid_email');
         $this->form_validation->set_rules('password', 'password', 'required');
 
         if ($this->form_validation->run() == FALSE) {
             $this->response([
                 'status' => false,
-                'message' => 'Email and password are required'
+                'message' => 'No users were found'
             ], 404);
         } else {
             $email = $_POST['email'];
             $password = $_POST['password'];
-            $user_check = $this->auth->check_email($email);
-            if ($user_check) {
-                if (password_verify($password, $user_check['password'])) {
-                    $session = [
-                        'is_login' => 'true',
-                        'first_name' => $user_check['first_name'],
-                        'email' => $user_check['email'],
-                        'roles' => $user_check['roles']
+
+            $emailCheck = $this->auth->check_email($email);
+
+            if ($emailCheck) {
+                $passwordUser = $emailCheck['password'];
+                if (password_verify($password, $passwordUser)) {
+                    $userData = [
+                        'id' => $emailCheck['id'],
+                        'first_name' => $emailCheck['first_name'],
+                        'email' => $emailCheck['email'],
+                        'role_id' => $emailCheck['role_id'],
                     ];
-                    $this->session->set_userdata($session);
+
+                    $generateToken = $this->authorization_token->generateToken($userData);
+
+                    $returnData = [
+                        'id' => $emailCheck['id'],
+                        'first_name' => $emailCheck['first_name'],
+                        'email' => $emailCheck['email'],
+                        'role_id' => $emailCheck['role_id'],
+                        'token' => $generateToken
+                    ];
 
                     $this->response([
                         'status' => true,
-                        'data' =>   $this->session->set_userdata($session)
+                        'data' => $returnData,
                     ], 200);
                 } else {
                     $this->response([
                         'status' => false,
-                        'message' => 'Email or password wrong'
+                        'message' => 'Something wrong, please try again'
                     ], 404);
                 }
             } else {
                 $this->response([
                     'status' => false,
-                    'message' => 'Email or password wrong'
+                    'message' => 'Something wrong, please try again'
                 ], 404);
             }
+
+            // $email = $_POST['email'];
+            // $password = $_POST['password'];
+            // $user_check = $this->auth->check_email($email);
+            // if ($user_check) {
+            //     $token['id'] =  $user_check['id'];
+            //     $token['first_name'] =  $user_check['first_name'];
+            //     $token['email'] =  $user_check['email'];
+            //     $token['role_id'] = $user_check['role_id'];
+            //     $userToken = $this->Authorization_Token->generateToken($token);
+
+            //     if (password_verify($password, $user_check['password'])) {
+            //         $session = [
+            //             'is_login' => 'true',
+            //             'first_name' => $user_check['first_name'],
+            //             'email' => $user_check['email'],
+            //             'roles' => $user_check['roles'],
+            //             'token' => $userToken
+            //         ];
+            //         // $this->session->set_userdata($session);
+
+            //         $this->response([
+            //             'status' => true,
+            //             'data' =>   $this->session->set_userdata($session)
+            //         ], 200);
+            //     } else {
+            //         $this->response([
+            //             'status' => false,
+            //             'message' => 'Email or password wrong'
+            //         ], 404);
+            //     }
+            // } else {
+            //     $this->response([
+            //         'status' => false,
+            //         'message' => 'Email or password wrong'
+            //     ], 404);
+            // }
         }
     }
 
