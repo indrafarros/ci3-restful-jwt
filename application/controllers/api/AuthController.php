@@ -23,28 +23,41 @@ class AuthController extends RestController
         // Users from a data store e.g. database
         $id = $this->get('id');
 
-        $userCheck = $this->auth->getUsers();
 
         if ($id === null) {
-            // Check if the users data store contains users
-            if ($userCheck) {
-                // Set the response and exit
-                $this->response($userCheck, 200);
-            } else {
-                // Set the response and exit
-                $this->response([
-                    'status' => false,
-                    'message' => 'No users were found'
-                ], 404);
-            }
-        } else {
+            $userCheck = $this->auth->getUsers();
 
-            if (array_key_exists($id, $userCheck)) {
-                $this->response($userCheck[$id], 200);
+            $page = $this->get('page');
+            $page = (empty($page) ? 1 : $page);
+            $totalData = $this->auth->userCount();
+            $totalPage = ceil($totalData / 5);
+            $startPage = ($page - 1) * 5;
+            $listData = $this->auth->getUsers(null, 5, $startPage);
+
+            $returnData =
+                [
+                    'status' => true,
+                    'page' => $page,
+                    'total_data' => $totalData,
+                    'total_page' => $totalPage,
+                    'data' => $listData
+                ];
+            $this->response([
+                'status' => true,
+                'message' => $returnData
+            ], 200);
+        } else {
+            $userCheck = $this->auth->getUsers($id);
+            if ($userCheck) {
+
+                $this->response([
+                    'status' => true,
+                    'message' => $userCheck
+                ], 200);
             } else {
                 $this->response([
                     'status' => false,
-                    'message' => 'No such user found'
+                    'message' => 'Data not found'
                 ], 404);
             }
         }
@@ -52,6 +65,7 @@ class AuthController extends RestController
 
     public function login_post()
     {
+
         header("Access-Control-Allow-Origin: *");
         $this->form_validation->set_rules('email', 'Email', 'required|valid_email');
         $this->form_validation->set_rules('password', 'password', 'required');

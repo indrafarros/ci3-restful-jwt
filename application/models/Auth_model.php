@@ -13,13 +13,24 @@ class Auth_model extends CI_Model
         return $this->db->insert('users', $data);
     }
 
-    public function checkUserId($id)
+    public function checkUserId($id = null)
     {
+
         return $this->db->get_where('users', ['id' => $id])->row_array();
     }
 
-    public function getUsers()
+    public function getUsers($id = null, $limit = 5, $offset = 0)
     {
-        return $this->db->get('users')->result_array();
+        if ($id === null) {
+
+            return $this->db->get('users', $limit, $offset)->result();
+        } else {
+            return $this->db->get_where('users', ['id' => $id])->result_array();
+        }
+    }
+
+    public function userCount()
+    {
+        return $this->db->get('users')->num_rows();
     }
 }
